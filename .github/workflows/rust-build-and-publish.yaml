@@ -1,0 +1,130 @@
+---
+env:
+  PACKAGE_NAME: atuin
+  PACKAGE_VERSION: v18.3.0
+  PACKAGE_DESCRIPTION: Magical shell History
+  BINARY_NAME: atuin
+
+name: Build, package and upload
+"on":
+  push:
+    paths-ignore:
+      - "*.md"
+      - LICENSE
+      - .github/renovate.json
+      - .gitignore
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - arm-unknown-linux-gnueabihf
+          - aarch64-unknown-linux-gnu
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        with:
+          repository: atuinsh/atuin.git
+          ref: ${{ env.PACKAGE_VERSION }}
+      - run: rustup update
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@23bce251a8cd2ffc3c1075eaa2367cf899916d84 # v2
+        with:
+          key: ${{ matrix.target }}
+      - run: cargo install cross --git https://github.com/cross-rs/cross
+      - name: cargo build
+        run: cross build --release --target=${{ matrix.target }}
+      - name: Upload build artifact
+        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: target/**/release/${{ env.BINARY_NAME }}
+  build-package:
+    name: Build Deb Package
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust_arch:
+          - x86_64-unknown-linux-gnu
+          - arm-unknown-linux-gnueabihf
+          - aarch64-unknown-linux-gnu
+      fail-fast: true
+    needs: build
+    steps:
+      - name: Check out code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Download build artifact
+        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4
+        with:
+          name: binary-${{ matrix.rust_arch }}
+      - name: Package
+        run: |
+          case ${ARCH} in
+            x86_64-unknown-linux-gnu)
+            export DEB_ARCH=amd64;;
+            arm-unknown-linux-gnueabihf)
+            export DEB_ARCH=armhf;;
+            aarch64-unknown-linux-gnu)
+            export DEB_ARCH=aarch64;;
+          esac
+          chmod +x ${ARCH}/release/atuin          
+          bundle exec fpm -f \
+          -s dir \
+          -t deb \
+          --deb-priority optional \
+          --maintainer github@growse.com \
+          --vendor https://atuin.sh/ \
+          --license MIT \
+          -n $DEB_NAME \
+          --description "${APP_DESCRIPTION}" \
+          --url ${APP_URL} \
+          --prefix / \
+          -a ${DEB_ARCH} \
+          -v ${PACKAGE_VERSION}-$(printf "%04d" $GITHUB_RUN_NUMBER) \
+          ${ARCH}/release/atuin=/usr/bin/atuin
+        env:
+          DEB_NAME: ${{ env.PACKAGE_NAME }}
+          APP_DESCRIPTION: ${{ env.PACKAGE_DESCRIPTION }}
+          APP_URL: https://atuin.sh/
+          ARCH: ${{ matrix.rust_arch }}
+          PACKAGE_VERSION: ${{ env.PACKAGE_VERSION }}
+      - name: Upload build artifact
+        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4
+        with:
+          name: deb-package-${{ matrix.rust_arch }}
+          path: "*.deb"
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    needs: build-package
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4
+        with:
+          pattern: deb-package-*
+      - name: Upload to Apt repo
+        env:
+          APT_CREDENTIALS: ${{ secrets.APT_CREDENTIALS }}
+          APT_KEY_PASSPHRASE: ${{ secrets.APT_KEY_PASSPHRASE }}
+        run: |
+          echo $APT_CREDENTIALS > aptly-auth
+          find -type f -name "*.deb" -exec curl -f --netrc-file aptly-auth -XPOST -F file=@{} https://apttoo.growse.com/api/files/atuin \;
+          export result=$(curl -f --netrc-file aptly-auth -X POST https://apttoo.growse.com/api/repos/defaultrepo/file/atuin)
+          echo $result
+          export failed=$(echo $result | jq '.FailedFiles | length')
+          if [[ "$failed" != "0" ]]; then exit 1; fi
+          curl -f --netrc-file aptly-auth -X PUT -H"Content-type: application/json" --data '{"ForceOverwrite":true,"Signing":{"Passphrase":"'"$APT_KEY_PASSPHRASE"'","Batch":true}}' https://apttoo.growse.com/api/publish/:./stablish
