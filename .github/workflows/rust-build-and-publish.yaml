@@ -44,7 +44,7 @@ jobs:
       - name: cargo build
         run: cross build --release --target=${{ matrix.target }}
       - name: Upload build artifact
-        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4
+        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029 # v4
         with:
           name: binary-${{ matrix.target }}
           path: target/**/release/${{ env.BINARY_NAME }}
@@ -102,7 +102,7 @@ jobs:
           ARCH: ${{ matrix.rust_arch }}
           PACKAGE_VERSION: ${{ env.PACKAGE_VERSION }}
       - name: Upload build artifact
-        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4
+        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029 # v4
         with:
           name: deb-package-${{ matrix.rust_arch }}
           path: "*.deb"
