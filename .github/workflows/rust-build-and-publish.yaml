@@ -42,6 +42,7 @@ jobs:
         uses: Swatinem/rust-cache@82a92a6e8fbeee089604da2575dc567ae9ddeaab # v2
         with:
           key: ${{ matrix.target }}
+      - run: cargo version
       - run: cargo install cross --git https://github.com/cross-rs/cross
       - name: cargo build
         run: cross build --release --target=${{ matrix.target }}
@@ -73,30 +74,7 @@ jobs:
         with:
           name: binary-${{ matrix.rust_arch }}
       - name: Package
-        run: |
-          case ${ARCH} in
-            x86_64-unknown-linux-gnu)
-            export DEB_ARCH=amd64;;
-            arm-unknown-linux-gnueabihf)
-            export DEB_ARCH=armhf;;
-            aarch64-unknown-linux-gnu)
-            export DEB_ARCH=aarch64;;
-          esac
-          chmod +x ${ARCH}/release/atuin
-          bundle exec fpm -f \
-          -s dir \
-          -t deb \
-          --deb-priority optional \
-          --maintainer github@growse.com \
-          --vendor https://atuin.sh/ \
-          --license MIT \
-          -n $DEB_NAME \
-          --description "${APP_DESCRIPTION}" \
-          --url ${APP_URL} \
-          --prefix / \
-          -a ${DEB_ARCH} \
-          -v ${PACKAGE_VERSION}-$(printf "%04d" $GITHUB_RUN_NUMBER) \
-          ${ARCH}/release/atuin=/usr/bin/atuin
+        run: ./package.sh
         env:
           DEB_NAME: ${{ env.PACKAGE_NAME }}
           APP_DESCRIPTION: ${{ env.PACKAGE_DESCRIPTION }}
@@ -122,10 +100,4 @@ jobs:
         env:
           APT_CREDENTIALS: ${{ secrets.APT_CREDENTIALS }}
           APT_KEY_PASSPHRASE: ${{ secrets.APT_KEY_PASSPHRASE }}
-        run: |
-          echo "$APT_CREDENTIALS" > aptly-auth
-          find -type f -name "*.deb" -exec curl -f --netrc-file aptly-auth -XPOST -F file=@{} https://apttoo.growse.com/api/files/atuin \;
-          export result; result=$(curl -f --netrc-file aptly-auth -X POST https://apttoo.growse.com/api/repos/defaultrepo/file/atuin)
-          export failed; failed=$(echo $result | jq '.FailedFiles | length')
-          if [[ "$failed" != "0" ]]; then exit 1; fi
-          curl -f --netrc-file aptly-auth -X PUT -H"Content-type: application/json" --data '{"ForceOverwrite":true,"Signing":{"Passphrase":"'"$APT_KEY_PASSPHRASE"'","Batch":true}}' https://apttoo.growse.com/api/publish/:./stablish
+        run: ./publish.sh
