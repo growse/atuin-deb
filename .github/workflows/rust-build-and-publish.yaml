@@ -26,8 +26,8 @@ jobs:
     strategy:
       matrix:
         target:
-          - x86_64-unknown-linux-gnu
-#          - arm-unknown-linux-gnueabihf
+#          - x86_64-unknown-linux-gnu
+          - arm-unknown-linux-gnueabihf
 #          - aarch64-unknown-linux-gnu
       fail-fast: true
     steps:
