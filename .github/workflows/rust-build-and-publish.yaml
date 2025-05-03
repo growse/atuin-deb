@@ -35,7 +35,7 @@ jobs:
         with:
           repository: atuinsh/atuin.git
           ref: ${{ env.PACKAGE_VERSION }}
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@9d7e65c320fdb52dcd45ffaa68deb6c02c8754d9 # v1
         with:
           cache: true
           cache-key: ${{ matrix.target }}
