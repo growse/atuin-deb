@@ -27,8 +27,8 @@ jobs:
       matrix:
         target:
 #          - x86_64-unknown-linux-gnu
-          - arm-unknown-linux-gnueabihf
-#          - aarch64-unknown-linux-gnu
+#          - arm-unknown-linux-gnueabihf
+          - aarch64-unknown-linux-gnu
       fail-fast: true
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
