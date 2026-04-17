@@ -44,7 +44,7 @@ jobs:
           args: "--locked --release"
           strip: true
       - name: Upload build artifact
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: binary-${{ matrix.target }}
           path: target/**/release/${{ env.BINARY_NAME }}
@@ -67,7 +67,7 @@ jobs:
         with:
           bundler-cache: true
       - name: Download build artifact
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: binary-${{ matrix.rust_arch }}
       - name: Package
@@ -79,7 +79,7 @@ jobs:
           ARCH: ${{ matrix.rust_arch }}
           PACKAGE_VERSION: ${{ env.PACKAGE_VERSION }}
       - name: Upload build artifact
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: deb-package-${{ matrix.rust_arch }}
           path: "*.deb"
@@ -90,7 +90,7 @@ jobs:
     needs: build-package
     steps:
       - name: Download build artifact
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: deb-package-*
       - name: Upload to Apt repo
