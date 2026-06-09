@@ -31,7 +31,7 @@ jobs:
           - aarch64-unknown-linux-gnu
       fail-fast: true
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           repository: atuinsh/atuin.git
           ref: ${{ env.PACKAGE_VERSION }}
@@ -61,7 +61,7 @@ jobs:
     needs: build
     steps:
       - name: Check out code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
